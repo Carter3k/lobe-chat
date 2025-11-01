@@ -30,11 +30,42 @@ ADMIN_PASSPHRASE = "warden"
 
 # --- OpenAI configuration ----------------------------------------------------
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_ORG = os.getenv("OPENAI_ORG")
-OPENAI_MODEL = os.getenv("YPSI_OPENAI_MODEL", os.getenv("OPENAI_MODEL", "gpt-4o-mini"))
-OPENAI_BASE_URL = os.getenv("YPSI_OPENAI_BASE_URL", os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"))
-OPENAI_VERBOSITY = os.getenv("YPSI_OPENAI_VERBOSITY", "medium")
+try:  # Allow local secrets without exporting env vars
+    import ypsilon_terminal_secret as _ypsilon_secret  # type: ignore
+except ImportError:  # pragma: no cover - optional convenience module
+    _ypsilon_secret = None
+
+
+def _secret_attr(name: str):
+    return getattr(_ypsilon_secret, name, None) if _ypsilon_secret else None
+
+
+def _coalesce(*values, default=None):
+    for value in values:
+        if value not in (None, ""):
+            return value
+    return default
+
+
+OPENAI_API_KEY = _coalesce(os.getenv("OPENAI_API_KEY"), _secret_attr("OPENAI_API_KEY"), default="")
+OPENAI_ORG = _coalesce(os.getenv("OPENAI_ORG"), _secret_attr("OPENAI_ORG"))
+OPENAI_MODEL = _coalesce(
+    os.getenv("YPSI_OPENAI_MODEL"),
+    os.getenv("OPENAI_MODEL"),
+    _secret_attr("OPENAI_MODEL"),
+    default="gpt-4o-mini",
+)
+OPENAI_BASE_URL = _coalesce(
+    os.getenv("YPSI_OPENAI_BASE_URL"),
+    os.getenv("OPENAI_BASE_URL"),
+    _secret_attr("OPENAI_BASE_URL"),
+    default="https://api.openai.com/v1",
+)
+OPENAI_VERBOSITY = _coalesce(
+    os.getenv("YPSI_OPENAI_VERBOSITY"),
+    _secret_attr("OPENAI_VERBOSITY"),
+    default="medium",
+)
 
 def ai_enabled() -> bool:
     return bool(OPENAI_API_KEY)
@@ -233,7 +264,8 @@ WARDEN / ADMIN
         )
     else:
         print(
-            "\nAI NARRATOR\n  Set OPENAI_API_KEY (and optional YPSI_OPENAI_MODEL/YPSI_OPENAI_BASE_URL) to enable narrate/AI embellishments.\n"
+            "\nAI NARRATOR\n  Set OPENAI_API_KEY (or add scripts/ypsilon_terminal_secret.py with OPENAI_API_KEY) "
+            "and optional YPSI_OPENAI_MODEL/YPSI_OPENAI_BASE_URL to enable narrate/AI embellishments.\n"
         )
 
 def cmd_status(args):

@@ -68,3 +68,4 @@ public/swe-worker*
 *.patch
 *.pdf
 vertex-ai-key.json
+scripts/ypsilon_terminal_secret.py
