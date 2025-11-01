@@ -295,12 +295,19 @@ export const fetchSSE = async (url: string, options: RequestInit & FetchSSEOptio
       try {
         data = JSON.parse(ev.data);
       } catch (e) {
+        const { message, name } = e as Error;
+        const firstInvalidToken = ev.data?.trim()?.[0];
+        const normalizedMessage =
+          firstInvalidToken && name === 'SyntaxError'
+            ? `Unexpected token ${firstInvalidToken} in JSON at position 0`
+            : message;
+
         console.warn('parse error:', e);
         options.onErrorHandle?.({
           body: {
             context: {
               chunk: ev.data,
-              error: { message: (e as Error).message, name: (e as Error).name },
+              error: { message: normalizedMessage, name },
             },
             message:
               'chat response streaming chunk parse error, please contact your API Provider to fix it.',
